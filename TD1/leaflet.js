@@ -2,7 +2,7 @@
 const map = L.map("map").setView([43.7000, 7.2667], 6);
 
 // ---- Définition des fonds de carte avec URLs Stadia Maps ----
-const stamenToner = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png", {
+const stamenToner = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png?api_key=eed6a6b4-d171-43e4-8215-e5f8490b4245", {
     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://stamen.com/">Stamen Design</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     subdomains: "abcd",
     minZoom: 0,
@@ -10,7 +10,7 @@ const stamenToner = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner
     ext: "png"
 });
 
-const stamenTonerLite = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png", {
+const stamenTonerLite = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png?api_key=eed6a6b4-d171-43e4-8215-e5f8490b4245", {
     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://stamen.com/">Stamen Design</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     subdomains: "abcd",
     minZoom: 0,
@@ -18,14 +18,14 @@ const stamenTonerLite = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_t
     ext: "png"
 });
 
-const stamenWatercolor = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg", {
+const stamenWatercolor = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg?api_key=eed6a6b4-d171-43e4-8215-e5f8490b4245", {
     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://stamen.com/">Stamen Design</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     subdomains: "abcd",
     minZoom: 1,
     maxZoom: 16
 });
 
-const stamenTerrain = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png", {
+const stamenTerrain = L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png?api_key=eed6a6b4-d171-43e4-8215-e5f8490b4245", {
     attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://stamen.com/">Stamen Design</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     subdomains: "abcd",
     minZoom: 0,
@@ -70,13 +70,22 @@ if ("geolocation" in navigator) {
         (pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
+            const precision = pos.coords.accuracy; // en mètres
 
             // Centrer la carte sur la position
             map.setView([lat, lon], 13);
 
             // Ajouter un marqueur à la position de l’utilisateur
             L.marker([lat, lon]).addTo(map)
-                .bindPopup("Vous êtes ici").openPopup();
+                .bindPopup(`Vous êtes ici<br>Précision : ${precision} m`).openPopup();
+
+            // Dessiner un cercle représentant la précision
+            L.circle([lat, lon], {
+                radius: precision,
+                color: "blue",
+                fillColor: "blue",
+                fillOpacity: 0.2
+            }).addTo(map);
         },
         (err) => {
             console.error("Erreur de géolocalisation : " + err.message);
