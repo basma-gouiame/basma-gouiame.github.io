@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Géolocalisation Smartphone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f9f9f9;
+        }
+        h1 {
+            font-size: 1.4em;
+            color: #333;
+        }
+        .bloc {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #eee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<h1>🌍 Test API Géolocalisation</h1>
+
+<div class="bloc">
+    <h2>Résultat getCurrentPosition()</h2>
+    <pre id="current"></pre>
+</div>
+
+<div class="bloc">
+    <h2>Résultat watchPosition()</h2>
+    <pre id="watch"></pre>
+</div>
+
+<script>
+    // Vérifier si la géolocalisation est disponible
+    if ("geolocation" in navigator) {
+
+        // ---- getCurrentPosition (une seule fois) ----
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                afficher(pos, "current");
+            },
+            (err) => {
+                document.getElementById("current").textContent =
+                    "Erreur : " + err.message;
+            },
+            {
+                enableHighAccuracy: true, // active GPS si dispo
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+
+        // ---- watchPosition (mise à jour continue) ----
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                afficher(pos, "watch");
+            },
+            (err) => {
+                document.getElementById("watch").textContent =
+                    "Erreur : " + err.message;
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+
+    } else {
+        alert("La géolocalisation n’est pas supportée par ce navigateur.");
+    }
+
+    // ---- Fonction d’affichage ----
+    function afficher(position, id) {
+        const coords = position.coords;
+        const date = new Date(position.timestamp);
+
+        let texte = `
+Latitude  : ${coords.latitude}
+Longitude : ${coords.longitude}
+Altitude  : ${coords.altitude !== null ? coords.altitude + " m" : "Non disponible"}
+Précision : ${coords.accuracy} m
+Précision altitude : ${coords.altitudeAccuracy ?? "N/A"} m
+Vitesse   : ${coords.speed !== null ? coords.speed + " m/s" : "Non disponible"}
+Date      : ${date.toLocaleString()}
+      `;
+        document.getElementById(id).textContent = texte;
+    }
+</script>
+</body>
+</html>
