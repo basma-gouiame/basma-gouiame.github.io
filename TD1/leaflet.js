@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', () => {
 // Création de la carte, centrée provisoirement sur Nice
 const map = L.map("map").setView([43.7000, 7.2667], 6);
 
@@ -219,3 +220,4 @@ function drawRouteMapbox(start, end) {
 }
 
 drawRouteMapbox(marseilleCoords, niceCoords);
+});
