@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', () => {
 if ("geolocation" in navigator) {
 
     // ---- getCurrentPosition (une seule fois) ----
@@ -51,3 +52,4 @@ Date      : ${date.toLocaleString()}
   `;
     document.getElementById(id).textContent = texte;
 }
+});
