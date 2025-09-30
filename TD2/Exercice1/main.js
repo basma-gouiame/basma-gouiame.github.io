@@ -42,6 +42,7 @@ loader.load(
     (obj) => {
         obj.scale.set(0.05, 0.05, 0.05);
         obj.position.x = 1.5; // à droite du cube
+        obj.rotation.set(-Math.PI / 2, 0, 0);
         scene.add(obj);
         sword = obj;
     },
@@ -79,10 +80,10 @@ function animate() {
     cube.rotation.y += 0.01;
 
     // rotation de l'épée
-    /*if (sword) {
+    if (sword) {
         sword.rotation.y += 0.02;
         sword.rotation.x += 0.01;
-    }*/
+    }
 
     // pluie
     const pos = particles.geometry.attributes.position.array;
