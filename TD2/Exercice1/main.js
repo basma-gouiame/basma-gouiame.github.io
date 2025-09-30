@@ -79,10 +79,10 @@ function animate() {
     cube.rotation.y += 0.01;
 
     // rotation de l'épée
-    if (sword) {
+    /*if (sword) {
         sword.rotation.y += 0.02;
         sword.rotation.x += 0.01;
-    }
+    }*/
 
     // pluie
     const pos = particles.geometry.attributes.position.array;
