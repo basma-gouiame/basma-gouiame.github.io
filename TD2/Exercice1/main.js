@@ -62,12 +62,12 @@ const particles = new THREE.Points(particlesGeometry, particlesMaterial);
 scene.add(particles);
 
 // --- DEVICE ORIENTATION ---
-window.addEventListener("deviceorientation", (event) => {
+window.addEventListener('deviceorientation', (event) => {
+    if (!missile) return;
     const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
     const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
     const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
-
-    camera.rotation.set(beta, alpha, -gamma);
+    missile.rotation.set(beta, gamma, alpha);
 }, true);
 
 // --- ANIMATE ---
