@@ -63,11 +63,11 @@ scene.add(particles);
 
 // --- DEVICE ORIENTATION ---
 window.addEventListener('deviceorientation', (event) => {
-    if (!missile) return;
+    if (!sword) return;
     const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
     const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
     const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
-    missile.rotation.set(beta, gamma, alpha);
+    sword.rotation.set(beta, gamma, alpha);
 }, true);
 
 // --- ANIMATE ---
@@ -95,10 +95,3 @@ function animate() {
     renderer.render(scene, camera);
 }
 animate();
-
-// --- RESIZE ---
-window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
