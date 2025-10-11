@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Terre 3D</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+        }
+        
+        #renderCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0;
+        }
+        
+        #map {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            height: 250px;
+            border-radius: 10px;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .leaflet-control-attribution {
+            font-size: 10px;
+        }
+    </style>
+
+    <!-- Feuille de style Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+</head>
+
+<body>
+    <!-- Carte Leaflet -->
+    <div id="map"></div>
+
+    <!-- Canvas BabylonJS pour l'affichage 3D -->
+    <canvas id="renderCanvas"></canvas>
+
+    <!-- Bibliothèque Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- Bibliothèques BabylonJS -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+    <script>
+        // Décalage de longitude pour ajuster la rotation de la Terre
+        const LON_OFFSET_DEG = -90;
+
+        /********************
+         * Variables globales
+         ********************/
+        let camera;
+        let latLonToVector3;
+
+        /********************
+         *  PARTIE LEAFLET
+         ********************/
+        // Création de la carte centrée sur [20, 0] avec un zoom de 2
+        const map = L.map("map").setView([20, 0], 2);
+
+        // Couche OpenStreetMap
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors"
+        }).addTo(map);
+
+        /********************
+         *  PARTIE BABYLON
+         ********************/
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        // Fonction principale qui crée la scène 3D
+        const createScene = () => {
+            const scene = new BABYLON.Scene(engine);
+
+            // --- Création de la caméra ---
+            camera = new BABYLON.ArcRotateCamera(
+                "camera",
+                0,
+                0,
+                6,
+                BABYLON.Vector3.Zero(),
+                scene
+            );
+
+            // Position initiale de la caméra (centrée sur l’Europe)
+            const europeLat = 50;
+            const europeLon = 10;
+            const phi = (90 - europeLat) * Math.PI / 180;
+            const theta = (europeLon + 180 + LON_OFFSET_DEG) * Math.PI / 180;
+
+            camera.alpha = theta + Math.PI / 2;
+            camera.beta = phi;
+            camera.radius = 4;
+
+            // Activation du contrôle souris sur le canvas
+            camera.attachControl(canvas, true);
+            camera.panningSensibility = 0;
+            camera.allowUpsideDown = true;
+            camera.lowerRadiusLimit = 2;
+            camera.upperRadiusLimit = 10;
+
+            // --- Lumière hémisphérique ---
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+            light.intensity = 1.1;
+
+            // --- Création de la sphère Terre ---
+            sphere = BABYLON.MeshBuilder.CreateSphere("earth", {
+                diameter: 2,
+                segments: 64
+            }, scene);
+
+            // Matériau (texture et couleurs) de la Terre
+            const material = new BABYLON.StandardMaterial("earthMat", scene);
+            material.diffuseTexture = new BABYLON.Texture("earth_daymap.png", scene);
+            material.diffuseTexture.uScale = -1;
+            material.diffuseTexture.vScale = -1;
+            material.specularColor = new BABYLON.Color3(0, 0, 0);
+            material.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+            sphere.material = material;
+            sphere.rotation.y = -Math.PI / 80; // rotation initiale légère
+
+            // --- Fonction de conversion latitude/longitude -> coordonnées 3D ---
+            latLonToVector3 = function(lat, lon, radius = 1) {
+                const phi = (90 - lat) * Math.PI / 180;
+                const theta = (lon - 180) * Math.PI / 180;
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.cos(phi);
+                const z = radius * Math.sin(phi) * Math.sin(theta);
+                return new BABYLON.Vector3(x, y, z);
+            };
+
+            // --- Chargement des pays et placement des drapeaux ---
+            fetch("https://restcountries.com/v3.1/all?fields=name,latlng,flags")
+                .then(res => res.json())
+                .then(data => {
+                    data.forEach(country => {
+                        // Vérifie que le pays a bien des coordonnées et un drapeau
+                        if (!country.latlng || country.latlng.length !== 2 || !country.flags) return;
+
+                        const lat = country.latlng[0];
+                        const lon = country.latlng[1];
+                        const flagUrl = country.flags.png;
+
+                        // Création d’un petit plan pour le drapeau
+                        const radius = 1.05;
+                        const plane = BABYLON.MeshBuilder.CreatePlane(country.name.common + "Flag", {
+                            width: 0.08,
+                            height: 0.05
+                        }, scene);
+                        plane.position = latLonToVector3(lat, lon, radius);
+
+                        // Application du drapeau en texture
+                        const matFlag = new BABYLON.StandardMaterial(country.name.common + "FlagMat", scene);
+                        matFlag.diffuseTexture = new BABYLON.Texture(flagUrl, scene, false, true, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, null, null, true);
+                        matFlag.specularColor = new BABYLON.Color3(0, 0, 0);
+                        plane.material = matFlag;
+
+                        // Le drapeau est toujours orienté vers la caméra
+                        plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+                        // Action au clic sur un drapeau : zoom sur la carte et oriente la caméra
+                        plane.actionManager = new BABYLON.ActionManager(scene);
+                        plane.actionManager.registerAction(
+                            new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, () => {
+                                map.setView([lat, lon], 5);
+                                const phi = (90 - lat) * Math.PI / 180;
+                                const theta = (lon + 180 + LON_OFFSET_DEG) * Math.PI / 180;
+                                camera.alpha = theta + Math.PI / 2;
+                                camera.beta = phi;
+                            })
+                        );
+                    });
+                });
+
+            // --- Si la géolocalisation est disponible, affiche la position de l’utilisateur ---
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const radius = 1.05;
+
+                    // Création d’un petit point vert à la position actuelle
+                    const point = BABYLON.MeshBuilder.CreateSphere("myPos", {
+                        diameter: 0.05
+                    }, scene);
+                    point.position = latLonToVector3(lat, lon, radius);
+
+                    const mat = new BABYLON.StandardMaterial("myPosMat", scene);
+                    mat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+                    mat.specularColor = new BABYLON.Color3(0, 0, 0);
+                    point.material = mat;
+
+                    // Action au clic sur le point : zoom sur la carte et oriente la caméra
+                    point.actionManager = new BABYLON.ActionManager(scene);
+                    point.actionManager.registerAction(
+                        new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, () => {
+                            map.setView([lat, lon], 5);
+                            const phi = (90 - lat) * Math.PI / 180;
+                            const theta = (lon + 180 + LON_OFFSET_DEG) * Math.PI / 180;
+                            camera.alpha = theta + Math.PI / 2;
+                            camera.beta = phi;
+                        })
+                    );
+                });
+            }
+
+            // Retourne la scène pour le rendu
+            return scene;
+        };
+
+        // Création effective de la scène
+        const scene = createScene();
+
+        // --- Marqueur cliquable sur la carte ---
+        let clickMarker = L.marker([0, 0], {
+            icon: L.divIcon({
+                className: '',
+            })
+        }).addTo(map);
+        clickMarker.setOpacity(0);
+
+        // Quand l’utilisateur clique sur la carte Leaflet
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lon = e.latlng.lng;
+
+            // Déplace et affiche le marqueur
+            clickMarker.setLatLng([lat, lon]);
+            clickMarker.setOpacity(1);
+
+            // Oriente la caméra vers la position cliquée
+            const phi = (90 - lat) * Math.PI / 180;
+            const theta = (lon + 180 + LON_OFFSET_DEG) * Math.PI / 180;
+            camera.alpha = theta + Math.PI / 2;
+            camera.beta = phi;
+        });
+
+        // Boucle de rendu BabylonJS (rafraîchit la scène en continu)
+        engine.runRenderLoop(() => scene.render());
+
+        // Redimensionne le rendu si la fenêtre change de taille
+        window.addEventListener("resize", () => engine.resize());
+    </script>
+</body>
+
+</html>
