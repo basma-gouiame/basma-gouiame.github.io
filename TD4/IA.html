@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carte contrôlée par la main</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #111;
+            color: white;
+            font-family: "Segoe UI", sans-serif;
+            overflow: hidden;
+        }
+        
+        #map {
+            flex: 1;
+        }
+        
+        #camera-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+        
+        #video,
+        #canvas {
+            width: 90%;
+            max-width: 600px;
+            border-radius: 10px;
+            transform: scaleX(-1);
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+        
+        #help-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #00ff80;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 255, 128, 0.3);
+        }
+        
+        #help-btn:hover {
+            background: #00cc66;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 128, 0.5);
+        }
+        
+        #help-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        #help-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 3px solid #00ff80;
+            box-shadow: 0 10px 50px rgba(0, 255, 128, 0.3);
+        }
+        
+        #help-content h2 {
+            margin: 0 0 20px 0;
+            color: #00ff80;
+            font-size: 26px;
+            text-align: center;
+        }
+        
+        .gesture-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #00ff80;
+        }
+        
+        .gesture-item.special {
+            border-left: 4px solid #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+        
+        .gesture-emoji {
+            font-size: 28px;
+            margin-right: 12px;
+        }
+        
+        .gesture-item strong {
+            color: #00ff80;
+            font-size: 17px;
+        }
+        
+        .gesture-item.special strong {
+            color: #ff6b6b;
+        }
+        
+        .tip {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 200, 0, 0.15);
+            border-radius: 8px;
+            border-left: 4px solid #ffc800;
+            font-size: 15px;
+        }
+        
+        .easter-egg {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 107, 107, 0.15);
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+            font-size: 15px;
+        }
+        
+        #close-popup {
+            width: 100%;
+            margin-top: 25px;
+            padding: 15px;
+            background: #00ff80;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #close-popup:hover {
+            background: #00cc66;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 128, 0.5);
+        }
+        
+        #status {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #00ff80;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            border: 2px solid #00ff80;
+        }
+        
+        #help-content::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        #help-content::-webkit-scrollbar-track {
+            background: #0a0a0a;
+            border-radius: 5px;
+        }
+        
+        #help-content::-webkit-scrollbar-thumb {
+            background: #00ff80;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+
+        <button id="help-btn">❓ Aide</button>
+
+        <div id="status">⏳ Chargement du modèle...</div>
+    </div>
+
+    <div id="help-popup">
+        <div id="help-content">
+            <h2>🎮 Comment contrôler la carte</h2>
+
+            <div class="gesture-item">
+                <span class="gesture-emoji">🖐️</span>
+                <strong>MAIN OUVERTE (5 doigts écartés)</strong><br><br> → Déplace ta main à <b>gauche/droite/haut/bas</b> pour naviguer sur la carte<br> → Bouge ta main dans la direction où tu veux aller
+            </div>
+
+            <div class="gesture-item">
+                <span class="gesture-emoji">👌</span>
+                <strong>SIGNE "OK" (cercle avec pouce + index)</strong><br><br> → Forme un cercle avec ton pouce et ton index<br> → Garde les 3 autres doigts levés<br> → <b>Maintiens ce geste 1 seconde</b> pour zoomer avant<br> → Le zoom se répète automatiquement
+                si tu maintiens
+            </div>
+
+            <div class="gesture-item">
+                <span class="gesture-emoji">✊</span>
+                <strong>POING FERMÉ (tous les doigts repliés)</strong><br><br> → Ferme complètement ta main en poing<br> → <b>Maintiens ce geste 1 seconde</b> pour dézoomer<br> → Le dézoom se répète automatiquement si tu maintiens
+            </div>
+
+            <div class="gesture-item special">
+                <span class="gesture-emoji">🤌</span>
+                <strong>GESTE ITALIEN (tous les doigts en pointe)</strong><br><br> → Rapproche tous tes doigts en pointe (pouce, index, majeur, annulaire, auriculaire)<br> → <b>Maintiens ce geste 1 seconde</b><br> → <b>🇮🇹 Tu seras téléporté à Rome !</b>
+            </div>
+
+            <div class="tip">
+                💡 <b>Conseils importants :</b><br><br> • Place-toi dans un <b>endroit bien éclairé</b><br> • Ta main doit être <b>entièrement visible</b> dans la caméra<br> • <b>Maintiens chaque geste 1-2 secondes</b> pour qu'il soit reconnu<br> • Les
+                <b>points verts</b> sur ta main montrent que tu es détecté ✓<br> • Change lentement de geste pour éviter les confusions
+            </div>
+
+            <div class="easter-egg">
+                🎉 <b>Easter egg découvert !</b><br> Le geste italien 🤌 te téléporte à Rome avec une animation fluide. Mamma mia !
+            </div>
+
+            <button id="close-popup">✓ J'ai compris</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7/dist/handpose.min.js"></script>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
